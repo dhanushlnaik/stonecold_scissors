@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── NextAuth required models ──────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  avatar        String?
+  username      String?   @unique
+  elo           Int       @default(1000)
+  wins          Int       @default(0)
+  losses        Int       @default(0)
+  createdAt     DateTime  @default(now())
+
+  accounts     Account[]
+  sessions     Session[]
+  hostedTournaments Tournament[] @relation("TournamentHost")
+  participations TournamentParticipant[]
+  player1Matches Match[] @relation("Player1")
+  player2Matches Match[] @relation("Player2")
+  wonMatches     Match[] @relation("Winner")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ── Game models ───────────────────────────────────────────────────────────────
+
+model Tournament {
+  id               String           @id @default(cuid())
+  name             String
+  format           String           @default("KNOCKOUT")
+  status           String           @default("DRAFT")
+  hostId           String
+  maxPlayers       Int              @default(16)
+  registrationEnds DateTime?
+  startsAt         DateTime?
+  visibility       String           @default("PUBLIC")
+  joinCode         String?          @unique
+  createdAt        DateTime         @default(now())
+
+  host         User                   @relation("TournamentHost", fields: [hostId], references: [id])
+  participants TournamentParticipant[]
+  matches      Match[]
+}
+
+model TournamentParticipant {
+  id           String   @id @default(cuid())
+  tournamentId String
+  userId       String
+  seed         Int?
+  wins         Int      @default(0)
+  losses       Int      @default(0)
+  points       Int      @default(0)
+  joinedAt     DateTime @default(now())
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@unique([tournamentId, userId])
+}
+
+model Match {
+  id           String   @id @default(cuid())
+  tournamentId String?
+  round        Int      @default(1)
+  player1Id    String
+  player2Id    String
+  winnerId     String?
+  status       String   @default("WAITING")
+  createdAt    DateTime @default(now())
+  completedAt  DateTime?
+
+  tournament Tournament?  @relation(fields: [tournamentId], references: [id])
+  player1    User         @relation("Player1", fields: [player1Id], references: [id])
+  player2    User         @relation("Player2", fields: [player2Id], references: [id])
+  winner     User?        @relation("Winner", fields: [winnerId], references: [id])
+  rounds     MatchRound[]
+}
+
+model MatchRound {
+  id          String  @id @default(cuid())
+  matchId     String
+  roundNumber Int
+  player1Move String?
+  player2Move String?
+  result      String?
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}

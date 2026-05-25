@@ -1,0 +1,22 @@
+{
+  "name": "@stonecold/db",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.32.1",
+  "dependencies": {
+    "@prisma/client": "^6.4.1",
+    "@stonecold/game-engine": "workspace:*",
+    "@stonecold/types": "workspace:*"
+  },
+  "devDependencies": {
+    "prisma": "6.4.1"
+  }
+}
