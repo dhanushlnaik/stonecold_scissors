@@ -4,7 +4,8 @@
 FROM node:20-alpine
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+RUN corepack enable && corepack prepare pnpm@10.32.1 --activate && \
+    npm install -g esbuild
 
 # ── Monorepo manifests ────────────────────────────────────────────────────────
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
@@ -15,18 +16,26 @@ COPY packages/game-engine/ packages/game-engine/
 COPY packages/types/       packages/types/
 COPY apps/realtime/        apps/realtime/
 
-# ── Install (devDeps included — ts-node is a devDep) ─────────────────────────
 RUN pnpm install --frozen-lockfile
 
-# ── Prisma client (postinstall is blocked in pnpm-workspace.yaml) ─────────────
+# Generate Prisma client for Alpine Linux
 RUN pnpm exec prisma generate --schema=packages/db/prisma/schema.prisma
+
+# Bundle: esbuild follows workspace symlinks and inlines @stonecold/* TypeScript.
+# npm packages (@prisma/client, ioredis, socket.io, etc.) stay as external requires.
+RUN esbuild apps/realtime/src/index.ts \
+    --bundle \
+    --platform=node \
+    --target=node20 \
+    --outfile=apps/realtime/dist/index.js \
+    --external:@prisma/client \
+    --external:ioredis \
+    --external:express \
+    --external:socket.io \
+    --external:cors \
+    --external:dotenv
 
 ENV NODE_ENV=production
 EXPOSE 4000
 
-# ts-node executes TypeScript natively, so @stonecold/db and other workspace
-# packages (which have main: "src/index.ts") work without a compile step.
-CMD ["node_modules/.bin/ts-node", \
-     "--project", "apps/realtime/tsconfig.json", \
-     "--transpile-only", \
-     "apps/realtime/src/index.ts"]
+CMD ["node", "apps/realtime/dist/index.js"]
