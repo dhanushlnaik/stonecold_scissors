@@ -6,6 +6,14 @@ services:
       dockerfile: apps/realtime/Dockerfile
     ports:
       - "4000:4000"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
     environment:
       NODE_ENV: production
       PORT: "4000"
