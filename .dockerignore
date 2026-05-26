@@ -1,0 +1,15 @@
+node_modules
+.git
+.env
+.env.*
+apps/web/.next
+apps/web/node_modules
+apps/realtime/dist
+apps/realtime/node_modules
+packages/*/node_modules
+nanobanana-output
+assets
+docs
+prompts
+*.md
+!packages/db/prisma

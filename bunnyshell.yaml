@@ -1,0 +1,21 @@
+kind: Environment
+name: stonecold-scissors
+components:
+  - kind: Application
+    name: realtime
+    dockerCompose:
+      build:
+        context: .
+        dockerfile: apps/realtime/Dockerfile
+      ports:
+        - "4000:4000"
+      environment:
+        NODE_ENV: production
+        PORT: "4000"
+        DATABASE_URL: "{{ env.vars.DATABASE_URL }}"
+        REDIS_URL: "{{ env.vars.REDIS_URL }}"
+        FRONTEND_URL: "{{ env.vars.FRONTEND_URL }}"
+    hosts:
+      - hostname: "{{ env.base_domain }}"
+        path: /
+        servicePort: 4000
