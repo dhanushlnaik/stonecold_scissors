@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum MatchFormat {
+  BEST_OF_3
+  BEST_OF_5
+}
+
 // ── NextAuth required models ──────────────────────────────────────────────────
 
 model User {
@@ -73,6 +78,7 @@ model Tournament {
   id               String           @id @default(cuid())
   name             String
   format           String           @default("KNOCKOUT")
+  matchFormat      MatchFormat      @default(BEST_OF_3)
   status           String           @default("DRAFT")
   hostId           String
   maxPlayers       Int              @default(16)
@@ -104,14 +110,17 @@ model TournamentParticipant {
 }
 
 model Match {
-  id           String   @id @default(cuid())
+  id           String      @id @default(cuid())
   tournamentId String?
-  round        Int      @default(1)
+  round        Int         @default(1)
   player1Id    String
   player2Id    String
   winnerId     String?
-  status       String   @default("WAITING")
-  createdAt    DateTime @default(now())
+  status       String      @default("WAITING")
+  format       MatchFormat @default(BEST_OF_3)
+  player1Score Int         @default(0)
+  player2Score Int         @default(0)
+  createdAt    DateTime    @default(now())
   completedAt  DateTime?
 
   tournament Tournament?  @relation(fields: [tournamentId], references: [id])

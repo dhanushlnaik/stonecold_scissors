@@ -44,6 +44,13 @@ export default async function Home() {
               >
                 ENTER THE ARENA
               </Link>
+              
+              <Link 
+                href="/arena/bot" 
+                className="pixel-button bg-zinc-800 px-8 py-6 text-xl font-press-start text-white text-center"
+              >
+                PRACTICE VS BOT
+              </Link>
               <form
                 action={async () => {
                   "use server";

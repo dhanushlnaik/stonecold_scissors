@@ -1,4 +1,5 @@
-import { prisma, Tournament, User } from './index';
+import { Tournament, User } from '@prisma/client';
+import { prisma } from './index';
 import { generateSingleEliminationBracket } from '@stonecold/game-engine';
 
 export class TournamentService {
@@ -8,6 +9,7 @@ export class TournamentService {
     format?: string;
     startsAt?: Date;
   }) {
+    const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     return prisma.tournament.create({
       data: {
         name: data.name,
@@ -15,6 +17,7 @@ export class TournamentService {
         format: data.format || 'SINGLE_ELIMINATION',
         status: 'REGISTRATION',
         startsAt: data.startsAt,
+        joinCode,
       },
     });
   }

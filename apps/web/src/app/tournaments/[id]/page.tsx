@@ -1,8 +1,9 @@
 import { TournamentService } from '@stonecold/db';
-import { auth } from '@/auth';
+import { auth, signIn } from '@/auth';
 import { joinTournament, commenceTournament } from '../actions';
-import { Trophy, Users, Sword, Shield, ArrowLeft } from 'lucide-react';
+import { Trophy, Users, Sword, Shield, ArrowLeft, Hash } from 'lucide-react';
 import { BracketView } from './bracket-view';
+import { ShareButton } from '@/components/share-button';
 import { RealtimeSync } from '@/components/realtime-sync';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -12,56 +13,95 @@ export default async function TournamentDetailPage({ params }: { params: Promise
   const session = await auth();
   const tournament = await TournamentService.getTournamentDetails(id);
 
-  if (!tournament) {
-    notFound();
-  }
+  if (!tournament) notFound();
 
   const isParticipant = tournament.participants.some(p => p.userId === session?.user?.id);
-  const isHost = tournament.hostId === session?.user?.id;
+  const isHost        = tournament.hostId === session?.user?.id;
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-8">
       <RealtimeSync mode="tournament" tournamentId={id} />
       <div className="scanlines" />
-      
+
       <div className="max-w-7xl mx-auto z-10 relative">
-        <Link 
-          href="/tournaments" 
+        <Link
+          href="/tournaments"
           className="inline-flex items-center gap-2 font-press-start text-[10px] text-zinc-500 hover:text-white transition-colors mb-8"
         >
           <ArrowLeft size={14} /> BACK TO EVENTS
         </Link>
 
-        {/* Header Section */}
+        {/* ── Header ── */}
         <div className="pixel-border bg-zinc-900 p-8 mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-          <div className="flex items-center gap-6">
-            <div className="bg-primary p-4 pixel-border rotate-3 shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]">
+          <div className="flex items-center gap-6 flex-1 min-w-0">
+            <div className="bg-primary p-4 pixel-border rotate-3 shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] shrink-0">
               <Trophy size={40} className="text-white" />
             </div>
-            <div>
-              <h1 className="font-press-start text-2xl md:text-4xl text-white mb-2 uppercase">
-                {tournament.name}
-              </h1>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3 mb-2">
+                <h1 className="font-press-start text-2xl md:text-4xl text-white uppercase truncate">
+                  {tournament.name}
+                </h1>
+                {/* Fix 3 — share button */}
+                <ShareButton />
+              </div>
               <div className="flex flex-wrap gap-4 items-center">
-                <span className="bg-secondary text-black font-press-start text-[10px] px-3 py-1 pixel-border">
+                <span className={`px-3 py-1 pixel-border font-press-start text-[10px] ${
+                  tournament.status === 'REGISTRATION' ? 'bg-secondary text-black' : 'bg-accent text-white'
+                }`}>
                   {tournament.status}
                 </span>
                 <span className="font-press-start text-[10px] text-zinc-500 uppercase">
                   HOSTED BY <span className="text-white">{tournament.host.username || 'ANONYMOUS'}</span>
                 </span>
+                {/* joinCode display */}
+                {tournament.joinCode && (
+                  <span className="flex items-center gap-1 font-press-start text-[10px] text-zinc-400 pixel-border px-2 py-1 bg-zinc-800">
+                    <Hash size={10} />
+                    DOJO CODE: <span className="text-secondary ml-1">{tournament.joinCode}</span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 w-full md:w-auto">
-            {tournament.status === 'REGISTRATION' && !isParticipant && session && (
+          {/* ── CTA column ── */}
+          <div className="flex flex-col gap-4 w-full md:w-auto shrink-0">
+
+            {/* Fix 2 — sign-in prompt for unauthenticated users */}
+            {!session && tournament.status === 'REGISTRATION' && (
+              <div className="flex flex-col gap-2">
+                <p className="font-press-start text-[8px] text-zinc-500 uppercase text-center">
+                  INITIALIZE ES-ID TO JOIN
+                </p>
+                <form action={async () => {
+                  'use server';
+                  await signIn('google', { redirectTo: `/tournaments/${id}` });
+                }}>
+                  <button className="pixel-button w-full px-6 py-3 bg-primary text-white font-press-start text-xs">
+                    GOOGLE ES-ID
+                  </button>
+                </form>
+                <form action={async () => {
+                  'use server';
+                  await signIn('discord', { redirectTo: `/tournaments/${id}` });
+                }}>
+                  <button className="pixel-button w-full px-6 py-3 bg-accent text-white font-press-start text-xs">
+                    DISCORD ES-ID
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Fix 1 — authenticated but not yet registered */}
+            {session && tournament.status === 'REGISTRATION' && !isParticipant && (
               <form action={joinTournament.bind(null, tournament.id)}>
                 <button className="pixel-button w-full px-8 py-4 bg-accent text-white font-press-start text-sm">
                   REGISTER ES-ID
                 </button>
               </form>
             )}
-            
+
             {isParticipant && (
               <div className="pixel-border bg-zinc-800 p-4 border-dashed border-zinc-700 text-center">
                 <p className="font-press-start text-[10px] text-secondary">REGISTRATION VERIFIED</p>
@@ -79,26 +119,27 @@ export default async function TournamentDetailPage({ params }: { params: Promise
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Main Bracket/Match Area */}
+          {/* Bracket */}
           <div className="lg:col-span-2 space-y-8">
             <div className="flex items-center gap-3 mb-6">
               <Sword className="text-primary" size={24} />
               <h2 className="font-press-start text-xl">CHAMPIONSHIP BRACKET</h2>
             </div>
-            
-            <BracketView 
-              matches={tournament.matches} 
-              participants={tournament.participants.map(p => ({ id: p.userId, username: p.user.username }))} 
+            {/* Fix 4 — pass currentUserId so bracket can highlight the user's match */}
+            <BracketView
+              matches={tournament.matches}
+              participants={tournament.participants.map(p => ({ id: p.userId, username: p.user.username }))}
+              currentUserId={session?.user?.id}
             />
           </div>
 
-          {/* Sidebar: Participants */}
+          {/* Roster sidebar */}
           <div className="space-y-8">
             <div className="flex items-center gap-3 mb-6">
               <Users className="text-secondary" size={24} />
               <h2 className="font-press-start text-xl uppercase">Roster</h2>
             </div>
-            
+
             <div className="space-y-4">
               {tournament.participants.map((p, idx) => (
                 <div key={p.id} className="pixel-border bg-zinc-900 p-4 flex items-center justify-between group hover:bg-zinc-800 transition-colors">
@@ -106,7 +147,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                     <span className="font-press-start text-[10px] text-zinc-600">#{idx + 1}</span>
                     <div className="w-8 h-8 bg-zinc-800 pixel-border border-zinc-700 flex items-center justify-center overflow-hidden">
                       {p.user.avatar ? (
-                        <img src={p.user.avatar} alt={p.user.username} className="w-full h-full pixelated" />
+                        <img src={p.user.avatar} alt={p.user.username ?? ''} className="w-full h-full pixelated" />
                       ) : (
                         <Users size={16} className="text-zinc-500" />
                       )}
@@ -121,7 +162,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
                   </div>
                 </div>
               ))}
-              
+
               {tournament.participants.length === 0 && (
                 <p className="font-press-start text-[10px] text-zinc-600 italic text-center py-8">
                   NO COMPETITORS REGISTERED

@@ -16,4 +16,9 @@ export function determineWinner(move1: Move, move2: Move): MatchResult {
   return 'PLAYER2_WIN';
 }
 
+export function getRandomMove(): Move {
+  const moves: Move[] = ['ROCK', 'PAPER', 'SCISSORS'];
+  return moves[Math.floor(Math.random() * moves.length)];
+}
+
 export * from './bracket';
